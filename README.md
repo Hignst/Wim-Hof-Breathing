@@ -1,71 +1,133 @@
-# ZenBreath: Wim Hof Breathing Trainer 🌬️
+Wim Hof Breathing Trainer 🌬️
 
-ZenBreath is a minimalist, high-performance web application designed to guide users through the Wim Hof breathing method. It features a high-precision breathing engine, synchronized audio cues, and a robust progress tracking system.
+An immersive breathing experience inspired by the Wim Hof Method.
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
-![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
+This project combines synchronized breathing animations, procedural audio, adaptive hold modes, and a minimalist deep-space interface to create a calm and focused breathwork experience directly in the browser.
 
-## ✨ Features
+🌐 Live Demo
 
-- **Interactive Breathing Engine**: A 60fps synchronized visual guide that mimics the natural rhythm of deep breathing.
-- **Precision Audio Cues**: Additive synthesis tones (Inhale, Exhale, Hold, Recovery) generated via Web Audio API.
-- **Progress Dashboard**: 
-    - **Session History**: Track your last 7 sessions with interactive charts.
-    - **Activity Calendar**: Visual heat-map of your practice days.
-    - **Streaks & Stats**: Keep track of your daily streak and personal best hold times.
-- **Advanced Hold Modes**: 
-    - **Target Mode**: Work towards specific hold goals per round.
-    - **Infinity Mode**: Push your limits with an open-ended timer.
-- **Safety First**: Integrated safety protocols and warnings before every session.
-- **Deep Space UI**: A beautiful, distraction-free minimalist interface designed for focus.
+https://hignst.github.io/Wim-Hof-Breathing/
 
-## 🛠️ Tech Stack
+✨ Features
+Guided Breathing Engine
+Smooth 60fps breathing animation
+Natural inhale / exhale rhythm
+Adjustable breathing speeds
+Pre-hold exhale transition
+Recovery breathing phase
+Round preparation countdown
+Audio System
+Procedural tones generated with Web Audio API
+Separate inhale, exhale, hold, and recovery sounds
+Final breath warning tones
+Adjustable master volume
+Hold Modes
+Target hold mode
+Manual / infinity hold mode
+Progressive round-based training
+Live hold timer and progress ring
+Statistics & Progress
+Session history
+Personal best tracking
+Activity calendar
+Daily streak system
+Total breathing analytics
+User Experience
+Deep-space minimalist UI
+AMOLED-friendly design
+Mobile-optimized layout
+Fullscreen breathing mode
+Immersive focus-oriented interface
+Safety
+Integrated breathing safety warning
+Safe recovery transitions
+Designed for seated or lying-down practice
+🛠️ Tech Stack
+React
+Vite
+Tailwind CSS
+Recharts
+Lucide React
+Web Audio API
+🚀 Getting Started
+Requirements
+Node.js 18+
+npm
+Installation
 
-- **Framework**: [React](https://reactjs.org/)
-- **Build Tool**: [Vite](https://vitejs.dev/)
-- **Styling**: [Tailwind CSS](https://tailwindcss.com/)
-- **Charts**: [Recharts](https://recharts.org/)
-- **Icons**: [Lucide React](https://lucide.dev/)
-- **Audio**: Web Audio API
+Clone the repository:
 
-## 🚀 Getting Started
+git clone https://github.com/Hignst/Wim-Hof-Breathing.git
 
-### Prerequisites
+Install dependencies:
 
-- Node.js (v18 or higher)
-- npm or yarn
+npm install
 
-### Installation
+Start development server:
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/zenbreath-wim-hof-trainer.git
-   ```
-2. Navigate to the directory:
-   ```bash
-   cd zenbreath-wim-hof-trainer
-   ```
-3. Install dependencies:
-   ```bash
-   npm install
-   ```
-4. Start the development server:
-   ```bash
-   npm run dev
-   ```
+npm run dev
 
-### Building for Production
+Build production version:
 
-To create a optimized single-file build:
-```bash
 npm run build
-```
+📱 Mobile Usage
 
-## ⚠️ Disclaimer
+For the best experience on mobile devices:
 
-This application is for educational purposes. The Wim Hof Method involves deep breathing and breath retention which can cause physiological changes. **Always practice in a safe environment (lying down or sitting). NEVER practice while driving, swimming, or in water.** Consult a doctor if you have any pre-existing medical conditions.
+Open the app in Safari or Chrome
+Add it to the Home Screen
+Launch it in fullscreen mode
 
-## 📄 License
+The application is optimized for immersive breathing sessions on both desktop and mobile devices.
 
-Distributed under the MIT License. See `LICENSE` for more information.
+🌌 Project Structure
+Main Branch
+
+Contains:
+
+full source code
+React/Vite project files
+development environment
+Site Branch
+
+Contains:
+
+production build only
+static deployment files for GitHub Pages
+⚠️ Safety Disclaimer
+
+This application is intended for wellness and breathing practice purposes only.
+
+The Wim Hof Method includes deep breathing and breath retention exercises which may cause dizziness or lightheadedness.
+
+Always practice:
+
+sitting or lying down
+in a safe environment
+away from water or dangerous situations
+
+Never practice:
+
+while driving
+while swimming
+in water
+while operating machinery
+
+If you feel discomfort or unwell during a session, stop immediately and return to normal breathing.
+
+📄 License
+
+MIT License
+
+🌠 Vision
+
+The goal of this project is to create a breathing experience that feels immersive, atmospheric, and calming — not just another breathing timer.
+
+Designed for:
+
+breathwork
+meditation
+focus
+relaxation
+mindfulness
+cold exposure preparation
