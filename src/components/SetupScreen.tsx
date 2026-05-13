@@ -11,17 +11,64 @@ interface SetupScreenProps {
 }
 
 export const SetupScreen: React.FC<SetupScreenProps> = ({ history, onStart }) => {
-  const [rounds, setRounds] = useState(3);
-  const [breaths, setBreaths] = useState(30);
-  const [speed, setSpeed] = useState('classic');
-  const [volume, setVolume] = useState(60);
-  const [manualMode, setManualMode] = useState(false);
-  const [holdTimes, setHoldTimes] = useState<number[]>([90, 120, 150]);
+  // Load initial state from LocalStorage or use defaults
+  const [rounds, setRounds] = useState(() => {
+    const saved = localStorage.getItem('wim_hof_rounds');
+    return saved ? parseInt(saved) : 3;
+  });
+  const [breaths, setBreaths] = useState(() => {
+    const saved = localStorage.getItem('wim_hof_breaths');
+    return saved ? parseInt(saved) : 30;
+  });
+  const [speed, setSpeed] = useState(() => {
+    return localStorage.getItem('wim_hof_speed') || 'classic';
+  });
+  const [volume, setVolume] = useState(() => {
+    const saved = localStorage.getItem('wim_hof_volume');
+    return saved ? parseInt(saved) : 60;
+  });
+  const [manualMode, setManualMode] = useState(() => {
+    return localStorage.getItem('wim_hof_manual') === 'true';
+  });
+  const [breathAudio, setBreathAudio] = useState(() => {
+    const saved = localStorage.getItem('wim_hof_breath_audio');
+    return saved === null ? false : saved === 'true'; // Default to false
+  });
+  const [uiAudio, setUiAudio] = useState(() => {
+    const saved = localStorage.getItem('wim_hof_ui_audio');
+    return saved === null ? true : saved === 'true';
+  });
+  const [holdTimes, setHoldTimes] = useState<number[]>(() => {
+    const saved = localStorage.getItem('wim_hof_hold_times');
+    return saved ? JSON.parse(saved) : [90, 120, 150];
+  });
 
+  // Save settings whenever they change
   useEffect(() => {
-    // Generate default hold times when rounds change
-    const newHoldTimes = Array.from({ length: rounds }, (_, i) => (i + 1) * 30 + 60);
-    setHoldTimes(newHoldTimes);
+    localStorage.setItem('wim_hof_rounds', rounds.toString());
+    localStorage.setItem('wim_hof_breaths', breaths.toString());
+    localStorage.setItem('wim_hof_speed', speed);
+    localStorage.setItem('wim_hof_volume', volume.toString());
+    localStorage.setItem('wim_hof_manual', manualMode.toString());
+    localStorage.setItem('wim_hof_breath_audio', breathAudio.toString());
+    localStorage.setItem('wim_hof_ui_audio', uiAudio.toString());
+    localStorage.setItem('wim_hof_hold_times', JSON.stringify(holdTimes));
+  }, [rounds, breaths, speed, volume, manualMode, holdTimes, breathAudio, uiAudio]);
+
+  // Adjust hold times array size when rounds change, but keep existing values if possible
+  useEffect(() => {
+    setHoldTimes(prev => {
+      if (prev.length === rounds) return prev;
+      const newTimes = [...prev];
+      if (newTimes.length < rounds) {
+        for (let i = newTimes.length; i < rounds; i++) {
+          newTimes.push((i + 1) * 30 + 60);
+        }
+      } else {
+        return newTimes.slice(0, rounds);
+      }
+      return newTimes;
+    });
   }, [rounds]);
 
   const streak = calculateStreak(history);
@@ -29,9 +76,11 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({ history, onStart }) =>
   const bestHold = history.length > 0 ? Math.max(...history.flatMap(s => s.holdTimes)) : 0;
 
   const SPEEDS = { slow: 6000, classic: 4000, fast: 2500 };
-  const estimatedSeconds = (rounds * breaths * SPEEDS[speed as keyof typeof SPEEDS]) / 1000 + 
-                           (manualMode ? 0 : holdTimes.reduce((a, b) => a + b, 0)) + 
-                           (rounds * 18); // 3s prep + 15s recovery
+  // Accurate calculation including: 
+  // 5s warning + rounds * (breathing + 4s final breath + 3s pre-recovery + 15s recovery + 3s prep)
+  const estimatedSeconds = 5 + 
+                           (rounds * (breaths * SPEEDS[speed as keyof typeof SPEEDS] / 1000 + 4 + 3 + 15 + 3)) - 3 + // subtract last prep
+                           (manualMode ? 0 : holdTimes.reduce((a, b) => a + b, 0));
 
   const formatTime = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
@@ -125,9 +174,9 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({ history, onStart }) =>
               onChange={(e) => setSpeed(e.target.value)}
               className="w-full bg-slate-800 border-none rounded-xl p-3 text-sm text-white focus:ring-1 focus:ring-cyan-500"
             >
-              <option value="slow">Slow</option>
-              <option value="classic">Classic</option>
-              <option value="fast">Fast</option>
+            <option value="slow">Slow (6.0s)</option>
+            <option value="classic">Classic (4.0s)</option>
+            <option value="fast">Fast (2.5s)</option>
             </select>
           </div>
           <div>
@@ -161,23 +210,55 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({ history, onStart }) =>
           </div>
         )}
 
-        <div className="flex items-center justify-between p-4 bg-slate-950/40 rounded-2xl border border-slate-800">
-          <div className="flex flex-col">
-            <span className="text-xs font-bold text-slate-300">Manual Hold Mode</span>
-            <span className="text-[10px] text-slate-500">Stop hold whenever you want</span>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between p-4 bg-slate-950/40 rounded-2xl border border-slate-800">
+            <div className="flex flex-col">
+              <span className="text-xs font-bold text-slate-300">Manual Hold Mode</span>
+              <span className="text-[10px] text-slate-500">Stop hold whenever you want</span>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input 
+                type="checkbox" checked={manualMode} 
+                onChange={(e) => setManualMode(e.target.checked)} 
+                className="sr-only peer" 
+              />
+              <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cyan-600"></div>
+            </label>
           </div>
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input 
-              type="checkbox" checked={manualMode} 
-              onChange={(e) => setManualMode(e.target.checked)} 
-              className="sr-only peer" 
-            />
-            <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cyan-600"></div>
-          </label>
+
+          <div className="flex items-center justify-between p-4 bg-slate-950/40 rounded-2xl border border-slate-800">
+            <div className="flex flex-col">
+              <span className="text-xs font-bold text-slate-300">Realistic Breath Sounds</span>
+              <span className="text-[10px] text-slate-500">Immersive air-flow noise</span>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input 
+                type="checkbox" checked={breathAudio} 
+                onChange={(e) => setBreathAudio(e.target.checked)} 
+                className="sr-only peer" 
+              />
+              <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cyan-600"></div>
+            </label>
+          </div>
+
+          <div className="flex items-center justify-between p-4 bg-slate-950/40 rounded-2xl border border-slate-800">
+            <div className="flex flex-col">
+              <span className="text-xs font-bold text-slate-300">UI Tones & Chimes</span>
+              <span className="text-[10px] text-slate-500">Signals for milestones</span>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input 
+                type="checkbox" checked={uiAudio} 
+                onChange={(e) => setUiAudio(e.target.checked)} 
+                className="sr-only peer" 
+              />
+              <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cyan-600"></div>
+            </label>
+          </div>
         </div>
 
         <button 
-          onClick={() => onStart({ rounds, breaths, speed, volume, manualMode, holdTimes })}
+          onClick={() => onStart({ rounds, breaths, speed, volume, manualMode, holdTimes, breathAudio, uiAudio })}
           className="w-full py-4 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-2xl transition-all shadow-[0_0_20px_rgba(6,182,212,0.3)] active:scale-95 flex items-center justify-center gap-2 group"
         >
           START SESSION
