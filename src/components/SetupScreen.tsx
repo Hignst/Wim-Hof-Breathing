@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar } from './Calendar';
 import { HistoryChart } from './HistoryChart';
+import { audio } from '../utils/audio';
 import { SessionRecord, calculateStreak } from '../utils/history';
 import { Flame, Clock, Trophy, ChevronRight } from 'lucide-react';
 
@@ -258,7 +259,10 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({ history, onStart }) =>
         </div>
 
         <button 
-          onClick={() => onStart({ rounds, breaths, speed, volume, manualMode, holdTimes, breathAudio, uiAudio })}
+          onClick={() => {
+            audio.init(); // Initialize audio context directly inside user gesture
+            onStart({ rounds, breaths, speed, volume, manualMode, holdTimes, breathAudio, uiAudio });
+          }}
           className="w-full py-4 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-2xl transition-all shadow-[0_0_20px_rgba(6,182,212,0.3)] active:scale-95 flex items-center justify-center gap-2 group"
         >
           START SESSION

@@ -6,15 +6,20 @@ class SoundEngine {
   private noiseBuffer: AudioBuffer | null = null;
   private droneGain: GainNode | null = null;
 
-  init() {
-    if (this.ctx) return;
-    this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    this.masterGain = this.ctx.createGain();
-    this.setVolume(this.volume);
-    this.masterGain.connect(this.ctx.destination);
+  async init() {
+    if (!this.ctx) {
+      this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      this.masterGain = this.ctx.createGain();
+      this.setVolume(this.volume);
+      this.masterGain.connect(this.ctx.destination);
+      this.createNoiseBuffer();
+      this.startAtmosphericDrone();
+    }
     
-    this.createNoiseBuffer();
-    this.startAtmosphericDrone();
+    // Explicitly resume context for iOS Safari
+    if (this.ctx.state === 'suspended') {
+      await this.ctx.resume();
+    }
   }
 
   private createNoiseBuffer() {

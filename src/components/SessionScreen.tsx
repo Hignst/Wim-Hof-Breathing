@@ -287,7 +287,7 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ config, onClose })
   }, [config, startRecovery]);
 
   useEffect(() => {
-    audio.init();
+    audio.init(); // Fallback init
     audio.setVolume(config.volume / 100);
     requestWakeLock();
     requestRef.current = requestAnimationFrame(animate);
