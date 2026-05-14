@@ -7,7 +7,9 @@ import { Trophy, Home, Hand, Infinity as InfinityIcon, ShieldAlert } from 'lucid
 const SPEEDS = {
   slow: 6000,
   classic: 4000,
-  fast: 2500
+  brisk: 3000,
+  fast: 2500,
+  dynamic: 5000 // Initial speed for dynamic mode
 };
 
 enum STATES {
@@ -35,12 +37,6 @@ interface SessionScreenProps {
 }
 
 export const SessionScreen: React.FC<SessionScreenProps> = ({ config, onClose }) => {
-  const formatTimer = (s: number) => {
-    const m = Math.floor(s / 60);
-    const sec = s % 60;
-    return `${m}:${sec.toString().padStart(2, '0')}`;
-  };
-
   const [status, setStatus] = useState<STATES>(STATES.WARNING);
   const [uiRound, setUiRound] = useState(1);
   const [uiBreath, setUiBreath] = useState(0);
@@ -64,7 +60,7 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ config, onClose })
     holdStart: 0,
     recoveryStart: 0,
     warningStart: performance.now(),
-    stepDuration: SPEEDS[config.speed as keyof typeof SPEEDS],
+    stepDuration: config.speed === 'dynamic' ? 5000 : SPEEDS[config.speed as keyof typeof SPEEDS],
     expansion: 0.4,
     lastPeakType: null as 'peak' | 'trough' | null,
     halfwayTriggered: false
@@ -89,6 +85,12 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ config, onClose })
       catch (err: any) { console.log('Wake Lock Release Error:', err.message); }
     }
   }, []);
+
+  const formatTimer = (s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m}:${sec.toString().padStart(2, '0')}`;
+  };
 
   const startHold = () => {
     const s = stateRef.current;
@@ -130,7 +132,7 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ config, onClose })
     s.status = STATES.PRE_ROUND;
     s.seconds = 3;
     s.phaseLabel = 'Prepare...';
-    s.recoveryStart = performance.now(); // reusing ref for countdown
+    s.recoveryStart = performance.now(); 
     setStatus(STATES.PRE_ROUND);
     setUiPhase('Prepare...');
     setUiSeconds(3);
@@ -184,8 +186,19 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ config, onClose })
         s.lastPeakType = 'peak';
         s.breath++;
         setUiBreath(Math.min(s.breath, config.breaths));
+        
+        // UPCOMING EXHALE DURATION
         const isFinalExhale = s.breath === config.breaths;
-        s.stepDuration = isFinalExhale ? SPEEDS[config.speed as keyof typeof SPEEDS] + 2000 : SPEEDS[config.speed as keyof typeof SPEEDS];
+        if (isFinalExhale) {
+          s.stepDuration = 6000; // Final slow exhale
+        } else if (config.speed === 'dynamic') {
+          if (s.breath <= 10) s.stepDuration = 5000;
+          else if (s.breath <= 20) s.stepDuration = 2500;
+          else s.stepDuration = 5000;
+        } else {
+          s.stepDuration = SPEEDS[config.speed as keyof typeof SPEEDS];
+        }
+
         if (config.breathAudio) audio.playBreath('exhale', s.stepDuration / 2000);
         if (config.uiAudio) {
             audio.playTone(AUDIO_FREQS.exhale, 0.8, 0.15);
@@ -196,13 +209,27 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ config, onClose })
 
       if (sinVal < -0.98 && s.lastPeakType !== 'trough') {
         s.lastPeakType = 'trough';
-        if (s.breath === config.breaths) startHold();
-        else {
+        if (s.breath === config.breaths) {
+          startHold();
+        } else {
+          // UPCOMING INHALE SETTINGS
           const isNextFinal = s.breath === config.breaths - 1;
-          s.stepDuration = isNextFinal ? SPEEDS[config.speed as keyof typeof SPEEDS] + 2000 : SPEEDS[config.speed as keyof typeof SPEEDS];
-          s.expansion = isNextFinal ? 0.8 : 0.4;
+          if (isNextFinal) {
+            s.stepDuration = 6000;
+            s.expansion = 0.8;
+          } else if (config.speed === 'dynamic') {
+            const nextB = s.breath + 1;
+            if (nextB <= 10) { s.stepDuration = 5000; s.expansion = 0.4; }
+            else if (nextB <= 20) { s.stepDuration = 2500; s.expansion = 0.6; }
+            else { s.stepDuration = 5000; s.expansion = 0.4; }
+          } else {
+            s.stepDuration = SPEEDS[config.speed as keyof typeof SPEEDS];
+            s.expansion = 0.4;
+          }
+          
           if (config.breathAudio) audio.playBreath('inhale', s.stepDuration / 2000);
           if (config.uiAudio) audio.playTone(AUDIO_FREQS.inhale, 1.2, 0.15);
+          
           if (isNextFinal) setUiPhase('FINAL INHALE');
           else if (s.breath === config.breaths - 3) {
             if (config.uiAudio) audio.playTone(880, 0.5, 0.2); 
@@ -243,6 +270,15 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ config, onClose })
       }
     }
 
+    // --- PRE-RECOVERY (The deep intake before hold) ---
+    else if (s.status === STATES.PRE_RECOVERY) {
+      // Expand to 1.8 (same as final breath) over the 3 second period
+      s.scale += (1.8 - s.scale) * 0.03;
+      setUiScale(s.scale);
+      
+      if (circleRef.current) circleRef.current.style.strokeDashoffset = "942";
+    }
+
     // --- RECOVERY ---
     else if (s.status === STATES.RECOVERY) {
       s.scale += (1.5 - s.scale) * 0.05;
@@ -272,7 +308,7 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ config, onClose })
         s.status = STATES.BREATHING;
         s.phase = -Math.PI / 2;
         s.lastPeakType = null;
-        s.stepDuration = SPEEDS[config.speed as keyof typeof SPEEDS];
+        s.stepDuration = config.speed === 'dynamic' ? 5000 : SPEEDS[config.speed as keyof typeof SPEEDS];
         s.expansion = 0.4;
         setUiRound(s.round);
         setUiBreath(0);
@@ -287,7 +323,7 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ config, onClose })
   }, [config, startRecovery]);
 
   useEffect(() => {
-    audio.init(); // Fallback init
+    audio.init();
     audio.setVolume(config.volume / 100);
     requestWakeLock();
     requestRef.current = requestAnimationFrame(animate);
@@ -367,7 +403,7 @@ export const SessionScreen: React.FC<SessionScreenProps> = ({ config, onClose })
         <svg className={`absolute w-80 h-80 -rotate-90 pointer-events-none transition-opacity duration-500 ${(status === STATES.HOLD || status === STATES.RECOVERY) ? 'opacity-100' : 'opacity-0'}`}>
           <circle ref={circleRef} cx="160" cy="160" r="150" stroke="currentColor" strokeWidth="4" fill="transparent" strokeDasharray="942" strokeDashoffset="942" className={`${status === STATES.HOLD ? 'text-red-500' : 'text-cyan-500 opacity-20'}`} />
         </svg>
-        <div style={{ transform: `scale(${uiScale})` }} className={`w-56 h-56 rounded-full flex flex-col items-center justify-center relative border-2 ${ (status === STATES.BREATHING && (stateRef.current.breath === config.breaths || (stateRef.current.breath === config.breaths - 1 && stateRef.current.lastPeakType !== 'peak'))) ? "border-red-500 bg-red-500/20 shadow-[0_0_60px_rgba(239,68,68,0.3)] transition-colors duration-1000" : "border-cyan-400/30 bg-cyan-400/5 shadow-[0_0_50px_rgba(34,211,238,0.1)] transition-colors duration-500" }`}>
+        <div style={{ transform: `scale(${uiScale})` }} className={`w-56 h-56 rounded-full flex flex-col items-center justify-center relative border-2 ${ (status === STATES.PRE_RECOVERY || (status === STATES.BREATHING && (stateRef.current.breath === config.breaths || (stateRef.current.breath === config.breaths - 1 && stateRef.current.lastPeakType !== 'peak')))) ? "border-red-500 bg-red-500/20 shadow-[0_0_60px_rgba(239,68,68,0.3)] transition-colors duration-1000" : "border-cyan-400/30 bg-cyan-400/5 shadow-[0_0_50px_rgba(34,211,238,0.1)] transition-colors duration-500" }`}>
             <p className="text-xs uppercase tracking-[0.3em] text-cyan-400 font-bold mb-2 transition-all">{uiPhase}</p>
             {(status === STATES.HOLD || status === STATES.RECOVERY || status === STATES.PRE_ROUND) && (
               <div className="flex flex-col items-center">

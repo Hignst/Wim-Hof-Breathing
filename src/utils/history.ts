@@ -31,10 +31,6 @@ export const getHistory = (): SessionRecord[] => {
   }
 };
 
-export const clearHistory = () => {
-  localStorage.removeItem(STORAGE_KEY);
-};
-
 export const calculateStreak = (history: SessionRecord[]): number => {
   if (history.length === 0) return 0;
   
@@ -50,7 +46,6 @@ export const calculateStreak = (history: SessionRecord[]): number => {
   let currentDate = new Date();
   currentDate.setHours(0, 0, 0, 0);
 
-  // Check if the most recent session is today or yesterday
   const lastSessionDate = new Date(sortedDays[0]);
   lastSessionDate.setHours(0, 0, 0, 0);
   
@@ -65,12 +60,11 @@ export const calculateStreak = (history: SessionRecord[]): number => {
     const expected = new Date(currentDate);
     expected.setDate(expected.getDate() - i);
     
-    // If the last session was yesterday, we shift our expectation
     if (diffInDays === 1 && i === 0) {
-        expected.setDate(expected.getDate()); // No change, just comparing yesterday to yesterday
+        expected.setDate(expected.getDate());
     }
 
-    if (d.getTime() === expected.getTime() || (i === 0 && diffInDays === 1 && d.getTime() === expected.getTime())) {
+    if (d.getTime() === expected.getTime()) {
       streak++;
     } else {
       break;

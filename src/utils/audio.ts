@@ -16,6 +16,16 @@ class SoundEngine {
       this.startAtmosphericDrone();
     }
     
+    // iOS Silent Switch Bypass: Play a short silent buffer via HTML5 Audio
+    // This "promotes" the audio session to Playback category which ignores the mute switch.
+    const silentAudio = new Audio();
+    silentAudio.src = "data:audio/wav;base64,UklGRigAAABXQVZRTU9OOf8BAAAAAAAAAAAAQG9uZQAAAAAAAAAAAAAAAAAAAAAAAAA=";
+    try {
+      await silentAudio.play();
+    } catch (e) {
+      console.log("Mute bypass failed, needs direct gesture");
+    }
+
     // Explicitly resume context for iOS Safari
     if (this.ctx.state === 'suspended') {
       await this.ctx.resume();

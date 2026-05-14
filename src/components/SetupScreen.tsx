@@ -76,11 +76,18 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({ history, onStart }) =>
   const totalTime = history.reduce((acc, s) => acc + s.totalDuration, 0);
   const bestHold = history.length > 0 ? Math.max(...history.flatMap(s => s.holdTimes)) : 0;
 
-  const SPEEDS = { slow: 6000, classic: 4000, fast: 2500 };
-  // Accurate calculation including: 
-  // 5s warning + rounds * (breathing + 4s final breath + 3s pre-recovery + 15s recovery + 3s prep)
+  const SPEEDS = { slow: 6000, classic: 4000, brisk: 3000, fast: 2500, dynamic: 4000 };
+  
+  // Dynamic speed calculation: 10 slow (5s) + 10 fast (2.5s) + 9 slow (5s) + final breath logic
+  const getBreathingTime = () => {
+    if (speed === 'dynamic') {
+      return (10 * 5000 + 10 * 2500 + 9 * 5000) / 1000;
+    }
+    return (breaths * SPEEDS[speed as keyof typeof SPEEDS] / 1000);
+  };
+
   const estimatedSeconds = 5 + 
-                           (rounds * (breaths * SPEEDS[speed as keyof typeof SPEEDS] / 1000 + 4 + 3 + 15 + 3)) - 3 + // subtract last prep
+                           (rounds * (getBreathingTime() + 4 + 3 + 15 + 3)) - 3 + 
                            (manualMode ? 0 : holdTimes.reduce((a, b) => a + b, 0));
 
   const formatTime = (seconds: number) => {
@@ -92,7 +99,9 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({ history, onStart }) =>
 
   const handleHoldTimeChange = (index: number, val: string) => {
     const newTimes = [...holdTimes];
-    newTimes[index] = parseInt(val) || 0;
+    // Remove non-numeric characters and leading zeros
+    const cleanVal = val.replace(/\D/g, '').replace(/^0+/, '');
+    newTimes[index] = cleanVal === '' ? 0 : parseInt(cleanVal);
     setHoldTimes(newTimes);
   };
 
@@ -155,14 +164,17 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({ history, onStart }) =>
           />
         </div>
 
-        <div>
+        <div className={speed === 'dynamic' ? 'opacity-40 pointer-events-none' : ''}>
           <div className="flex justify-between items-center mb-2">
-             <label className="text-xs uppercase tracking-widest text-slate-500 font-bold">Breaths per Round</label>
-             <span className="text-sm text-cyan-400 font-mono">{breaths}</span>
+             <label className="text-xs uppercase tracking-widest text-slate-500 font-bold">
+               {speed === 'dynamic' ? 'Breaths (Locked)' : 'Breaths per Round'}
+             </label>
+             <span className="text-sm text-cyan-400 font-mono">{speed === 'dynamic' ? 30 : breaths}</span>
           </div>
           <input 
-            type="range" min="5" max="60" step="5" value={breaths} 
+            type="range" min="5" max="60" step="5" value={speed === 'dynamic' ? 30 : breaths} 
             onChange={(e) => setBreaths(parseInt(e.target.value))}
+            disabled={speed === 'dynamic'}
             className="w-full accent-cyan-500 h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer"
           />
         </div>
@@ -172,12 +184,18 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({ history, onStart }) =>
             <label className="block text-xs uppercase tracking-widest text-slate-500 font-bold mb-2">Speed</label>
             <select 
               value={speed}
-              onChange={(e) => setSpeed(e.target.value)}
+              onChange={(e) => {
+                const newSpeed = e.target.value;
+                setSpeed(newSpeed);
+                if (newSpeed === 'dynamic') setBreaths(30);
+              }}
               className="w-full bg-slate-800 border-none rounded-xl p-3 text-sm text-white focus:ring-1 focus:ring-cyan-500"
             >
             <option value="slow">Slow (6.0s)</option>
             <option value="classic">Classic (4.0s)</option>
+            <option value="brisk">Classic (3.0s)</option>
             <option value="fast">Fast (2.5s)</option>
+            <option value="dynamic">Dynamic (Variable)</option>
             </select>
           </div>
           <div>
@@ -195,15 +213,18 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({ history, onStart }) =>
         {!manualMode && (
           <div>
             <label className="block text-xs uppercase tracking-widest text-slate-500 font-bold mb-3">Hold Goals (seconds)</label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 gap-3">
               {holdTimes.map((time, i) => (
-                <div key={i} className="space-y-1">
-                  <span className="text-[9px] text-slate-600 block text-center uppercase">R{i+1}</span>
+                <div key={i} className="bg-slate-950/40 rounded-xl p-2 border border-slate-800/50">
+                  <span className="text-[8px] text-slate-600 block text-center uppercase mb-1 font-bold">Round {i+1}</span>
                   <input 
-                    type="number" 
-                    value={time} 
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    value={time === 0 ? '' : time} 
+                    placeholder="0"
                     onChange={(e) => handleHoldTimeChange(i, e.target.value)}
-                    className="w-full bg-slate-800 border-none rounded-lg p-2 text-center text-sm font-mono text-cyan-400"
+                    className="w-full bg-transparent border-none p-0 text-center text-sm font-mono text-cyan-400 focus:ring-0 placeholder:text-slate-800"
                   />
                 </div>
               ))}
